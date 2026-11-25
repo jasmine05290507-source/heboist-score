@@ -110,15 +110,16 @@ small{color:#cbd5e1}
 <h2 id="status" class="center"></h2>
 <div class="grid">
 <div class="center">
-<span id="teamB">相手</span>
-<div id="sb" class="score">0</div>
-<button id="pb" onclick="point(1)">＋1点</button>
-</div>
-<div class="center">
 HEBOIST
 <div id="sa" class="score">0</div>
 <button id="pa" onclick="point(0)">＋1点</button>
 </div>
+<div class="center">
+<span id="teamB">相手</span>
+<div id="sb" class="score">0</div>
+<button id="pb" onclick="point(1)">＋1点</button>
+</div>
+
 </div>
 <p id="games" class="center"></p>
 <div id="court" class="court"></div>
@@ -277,13 +278,13 @@ let r=pos[1-t][p];
 $('service').textContent='サーブ：'+teamName(t)+'の'+(p===0?'右':'左')+
 ' ／ レシーブ：'+teamName(1-t)+'の'+(p===0?'右':'左');
 $('court').replaceChildren();
-[1,0].forEach(team=>{
+[0,1].forEach(team=>{
 let row=document.createElement('div');
 row.className='court-team';
 let title=document.createElement('strong');
 title.textContent=teamName(team);
 row.appendChild(title);
-let order=team===0?[0,1]:[1,0];
+let order=team===0?[1,0]:[0,1];
 order.forEach(j=>{
 let i=pos[team][j];
 let cell=document.createElement('div');
