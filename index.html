@@ -1,0 +1,338 @@
+
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<title>HEBOIST SCORE</title>
+<style>
+*{box-sizing:border-box}
+body{font-family:system-ui,sans-serif;background:#14243d;color:white;margin:0;padding:16px}
+main{max-width:600px;margin:auto}
+h1{text-align:center;color:#f4d66d}
+section{background:#233752;border-radius:16px;padding:16px;margin:12px 0}
+input,select,button{font:inherit;padding:12px;border:0;border-radius:10px;margin:5px 0;max-width:100%}
+input,select{width:100%}
+button{background:#f4d66d;color:#14243d;font-weight:bold;width:100%;cursor:pointer}
+button:disabled{opacity:.4}
+.grid{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+.score{font-size:64px;font-weight:bold;text-align:center}
+.center{text-align:center}
+.court{background:#28765c;padding:12px;border-radius:12px}
+.player{border:1px solid white;padding:14px 4px;text-align:center}
+.active{background:#d8b94e;color:#14243d}
+small{color:#cbd5e1}
+[hidden]{display:none!important}
+</style>
+</head>
+<body>
+<main>
+<h1>🏸 HEBOIST SCORE</h1>
+<p class="center">バドしたい人の得点管理</p>
+
+<section id="setup">
+<h2>試合設定</h2>
+<div class="grid">
+<div>
+<h3>Aチーム</h3>
+<input id="a1" value="選手A">
+<input id="a2" value="選手B">
+<select id="ta">
+<option value="2">男子</option>
+<option value="1">混合</option>
+<option value="0">女子</option>
+</select>
+</div>
+<div>
+<h3>Bチーム</h3>
+<input id="b1" value="選手C">
+<input id="b2" value="選手D">
+<select id="tb">
+<option value="2">男子</option>
+<option value="1">混合</option>
+<option value="0">女子</option>
+</select>
+</div>
+</div>
+得点ルール
+<select id="target">
+<option>11</option>
+<option selected>15</option>
+<option>21</option>
+</select>
+デュース
+<select id="deuce">
+<option value="0">なし</option>
+<option value="1">あり</option>
+</select>
+デュース上限
+<input id="cap" type="number" value="21" min="12" max="99">
+試合形式
+<select id="format">
+<option value="1">1ゲーム</option>
+<option value="3" selected>3ゲームマッチ</option>
+</select>
+ハンデ
+<select id="handicap">
+<option value="1">あり</option>
+<option value="0">なし</option>
+</select>
+<button onclick="prepare()">試合設定を確定</button>
+</section>
+
+<section id="opening" hidden>
+<h2 id="gameTitle"></h2>
+<p id="initial"></p>
+最初のサーバー
+<select id="first" onchange="receivers()"></select>
+最初のレシーバー
+<select id="receiver"></select>
+<button onclick="startGame()">ゲーム開始</button>
+</section>
+
+<section id="play" hidden>
+<h2 id="status" class="center"></h2>
+<div class="grid">
+<div class="center">
+Aチーム
+<div id="sa" class="score">0</div>
+<button id="pa" onclick="point(0)">＋1点</button>
+</div>
+<div class="center">
+Bチーム
+<div id="sb" class="score">0</div>
+<button id="pb" onclick="point(1)">＋1点</button>
+</div>
+</div>
+<p id="games" class="center"></p>
+<div id="court" class="court"></div>
+<p id="service"></p>
+<p id="notice"></p>
+<button id="undo" onclick="undoPoint()">1点取り消し</button>
+<button id="next" onclick="nextGame()" hidden>次のゲームへ</button>
+<button id="save" onclick="saveMatch()" hidden>試合結果を保存</button>
+<h3>得点履歴</h3>
+<div id="log"></div>
+</section>
+
+<section>
+<h2>保存した試合</h2>
+<div id="records"></div>
+<button onclick="exportData()">履歴をJSONで保存</button>
+</section>
+</main>
+
+<script>
+const $=id=>document.getElementById(id);
+let names=[],config={},h=[0,0],score=[0,0];
+let pos=[],server=0,games=[0,0],number=1;
+let history=[],events=[],completed=[],winner=-1;
+let records=[];
+try{
+records=JSON.parse(localStorage.getItem('heboist')||'[]');
+}catch(e){}
+function clone(x){
+return JSON.parse(JSON.stringify(x));
+}
+function show(id,on){
+$(id).hidden=!on;
+}
+function prepare(){
+names=['a1','a2','b1','b2'].map(id=>$(id).value.trim()||id);
+config={
+target:Number($('target').value),
+deuce:$('deuce').value==='1',
+cap:Number($('cap').value),
+format:Number($('format').value),
+types:[Number($('ta').value),Number($('tb').value)],
+handicap:$('handicap').value==='1'
+};
+if(config.deuce&&config.cap<=config.target){
+alert('上限は目標点数より大きくしてください');
+return;
+}
+h=[0,0];
+let d=config.types[0]-config.types[1];
+if(config.handicap&&d!==0){
+h[d>0?1:0]=Math.abs(d)===2?3:2;
+}
+games=[0,0];
+number=1;
+completed=[];
+show('setup',false);
+opening(-1);
+}
+function option(select,i){
+let o=document.createElement('option');
+o.value=i;
+o.textContent=names[i];
+select.appendChild(o);
+}
+function opening(team){
+show('play',false);
+show('opening',true);
+$('gameTitle').textContent='第'+number+'ゲーム';
+$('initial').textContent='開始得点：'+h.join(' − ');
+$('first').replaceChildren();
+names.forEach((n,i)=>{
+if(team===-1||Math.floor(i/2)===team)
+option($('first'),i);
+});
+receivers();
+}
+function receivers(){
+let t=Math.floor(Number($('first').value)/2);
+$('receiver').replaceChildren();
+names.forEach((n,i)=>{
+if(Math.floor(i/2)!==t)option($('receiver'),i);
+});
+}
+function startGame(){
+score=[...h];
+server=Number($('first').value);
+let r=Number($('receiver').value);
+let t=Math.floor(server/2);
+pos=[[0,1],[2,3]];
+let p=score[t]%2;
+if(pos[t][p]!==server)pos[t].reverse();
+if(pos[1-t][p]!==r)pos[1-t].reverse();
+history=[];
+events=[];
+winner=-1;
+show('opening',false);
+show('play',true);
+render();
+}
+function point(t){
+if(winner!==-1)return;
+history.push(clone({score,pos,server,events}));
+let same=Math.floor(server/2)===t;
+score[t]++;
+if(same)pos[t].reverse();
+else server=pos[t][score[t]%2];
+events.push(clone({
+time:new Date().toISOString(),
+team:t,score,server,pos,
+receiver:pos[1-t][score[t]%2]
+}));
+render();
+}
+function undoPoint(){
+if(!history.length)return;
+let s=history.pop();
+score=s.score;
+pos=s.pos;
+server=s.server;
+events=s.events;
+render();
+}
+function render(){
+winner=-1;
+let max=Math.max(...score);
+if(max>=config.target&&
+(!config.deuce||
+Math.abs(score[0]-score[1])>=2||
+max>=config.cap)){
+winner=score[0]>score[1]?0:1;
+}
+let finished=winner!==-1&&
+games[winner]+1>=Math.ceil(config.format/2);
+$('sa').textContent=score[0];
+$('sb').textContent=score[1];
+$('status').textContent=winner===-1?
+'第'+number+'ゲーム':
+(winner===0?'A':'B')+'チーム勝利';
+$('games').textContent='取得ゲーム：'+
+games.map((g,i)=>g+(winner===i?1:0)).join(' − ');
+$('pa').disabled=$('pb').disabled=winner!==-1;
+$('undo').disabled=!history.length;
+let t=Math.floor(server/2);
+let p=score[t]%2;
+let r=pos[1-t][p];
+$('service').textContent='サーブ：'+names[server]+
+' ／ レシーブ：'+names[r];
+$('court').replaceChildren();
+[0,1].forEach(team=>{
+let row=document.createElement('div');
+row.className='grid';
+let order=team===0?[1,0]:[0,1];
+order.forEach(j=>{
+let i=pos[team][j];
+let cell=document.createElement('div');
+cell.className='player'+(i===server?' active':'');
+cell.textContent=(j===0?'右':'左')+'：'+names[i]+
+(i===server?' 🏸':i===r?' レシーブ':'');
+row.appendChild(cell);
+});
+$('court').appendChild(row);
+});
+$('notice').textContent=winner!==-1&&!finished?
+'コートチェンジしてください':
+finished?'試合終了':'';
+show('next',winner!==-1&&!finished);
+show('save',finished);
+$('log').replaceChildren();
+events.slice().reverse().forEach(e=>{
+let p=document.createElement('p');
+p.textContent=(e.team===0?'A':'B')+' ＋1 ／ '+
+e.score.join(' − ')+' ／ サーブ：'+names[e.server];
+$('log').appendChild(p);
+});
+}
+function finishGame(){
+completed.push(clone({number,initial:h,score,events,winner}));
+games[winner]++;
+}
+function nextGame(){
+if(winner===-1)return;
+let w=winner;
+finishGame();
+number++;
+opening(w);
+}
+function saveMatch(){
+if(winner===-1)return;
+let record=clone({
+date:new Date().toISOString(),
+names,config,
+games:games.map((g,i)=>g+(i===winner?1:0)),
+details:[...completed,{number,initial:h,score,events,winner}]
+});
+let updated=[record,...records];
+try{
+localStorage.setItem('heboist',JSON.stringify(updated));
+records=updated;
+}catch(e){
+alert('保存できませんでした');
+return;
+}
+show('play',false);
+show('setup',true);
+renderRecords();
+}
+function renderRecords(){
+$('records').replaceChildren();
+records.forEach(r=>{
+let p=document.createElement('p');
+p.textContent=new Date(r.date).toLocaleString('ja-JP')+
+' ／ '+r.names.slice(0,2).join('・')+
+' vs '+r.names.slice(2).join('・')+
+' ／ '+r.games.join(' − ');
+$('records').appendChild(p);
+});
+}
+function exportData(){
+let blob=new Blob([JSON.stringify(records,null,2)],
+{type:'application/json'});
+let url=URL.createObjectURL(blob);
+let a=document.createElement('a');
+a.href=url;
+a.download='heboist-history.json';
+a.click();
+setTimeout(()=>URL.revokeObjectURL(url),1000);
+}
+renderRecords();
+</script>
+</body>
+</html>
