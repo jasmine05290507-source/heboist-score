@@ -28,6 +28,15 @@ button:disabled{opacity:.4}
 .court-team+ .court-team{border-left:3px solid white}
 small{color:#cbd5e1}
 [hidden]{display:none!important}
+#sheet{background:white;color:#111;padding:12px;overflow-wrap:anywhere}
+#sheet table{border-collapse:collapse;width:100%;table-layout:fixed;margin:5px 0 12px;font-size:11px}
+#sheet th,#sheet td{border:1px solid #333;text-align:center;height:22px;padding:1px}
+#sheet td{color:#a32222}
+#sheet h2{text-align:center;letter-spacing:.2em}
+#sheet .meta{font-size:12px;line-height:1.7}
+#sheet .final{font-weight:bold;border:2px solid #a32222}
+@page{size:A4 landscape;margin:9mm}
+@media print{body{background:white;color:black;padding:0}main{max-width:none}main>*:not(#sheet){display:none!important}#sheet{display:block!important;padding:0;margin:0}#sheet .no-print{display:none!important}#sheet table{break-inside:avoid}}
 </style>
 </head>
 <body>
@@ -37,6 +46,10 @@ small{color:#cbd5e1}
 
 <section id="setup">
 <h2>試合設定</h2>
+<input id="eventName" placeholder="大会名（任意）">
+<input id="matchNo" placeholder="試合番号（任意）">
+<input id="courtNo" placeholder="コート番号（任意）">
+<input id="umpire" placeholder="主審（任意）">
 <div class="grid">
 <div>
 <h3>Aチーム</h3>
@@ -125,6 +138,7 @@ Aチーム
 <div id="records"></div>
 <button onclick="exportData()">履歴をJSONで保存</button>
 </section>
+<section id="sheet" hidden></section>
 </main>
 
 <script>
@@ -132,7 +146,7 @@ const $=id=>document.getElementById(id);
 let names=[],config={},h=[0,0],score=[0,0];
 let pos=[],server=0,games=[0,0],number=1;
 let history=[],events=[],completed=[],winner=-1;
-let records=[];
+let records=[],matchStart=null,gameStart=null,firstServer=null;
 try{
 records=JSON.parse(localStorage.getItem('heboist')||'[]');
 }catch(e){}
@@ -145,6 +159,7 @@ $(id).hidden=!on;
 function prepare(){
 names=['a1','a2','b1','b2'].map(id=>$(id).value.trim()||id);
 config={
+meta:{event:$('eventName').value,match:$('matchNo').value,court:$('courtNo').value,umpire:$('umpire').value},
 target:Number($('target').value),
 deuce:$('deuce').value==='1',
 cap:Number($('cap').value),
@@ -164,6 +179,7 @@ h[d>0?1:0]=Math.abs(d)===2?3:2;
 games=[0,0];
 number=1;
 completed=[];
+matchStart=null;
 show('setup',false);
 opening(-1);
 }
@@ -195,6 +211,9 @@ if(Math.floor(i/2)!==t)option($('receiver'),i);
 function startGame(){
 score=[...h];
 server=Number($('first').value);
+firstServer=server;
+gameStart=new Date().toISOString();
+if(!matchStart)matchStart=gameStart;
 let r=Number($('receiver').value);
 let t=Math.floor(server/2);
 pos=[[0,1],[2,3]];
@@ -288,7 +307,7 @@ $('log').appendChild(p);
 });
 }
 function finishGame(){
-completed.push(clone({number,initial:h,score,events,winner}));
+completed.push(clone({number,initial:h,score,events,winner,firstServer,gameStart}));
 games[winner]++;
 }
 function nextGame(){
@@ -302,9 +321,9 @@ function saveMatch(){
 if(winner===-1)return;
 let record=clone({
 date:new Date().toISOString(),
-names,config,
+names,config,matchStart,matchEnd:events.at(-1)?.time||new Date().toISOString(),
 games:games.map((g,i)=>g+(i===winner?1:0)),
-details:[...completed,{number,initial:h,score,events,winner}]
+details:[...completed,{number,initial:h,score,events,winner,firstServer,gameStart}]
 });
 let updated=[record,...records];
 try{
@@ -327,7 +346,47 @@ p.textContent=new Date(r.date).toLocaleString('ja-JP')+
 ' vs '+r.names.slice(2).join('・')+
 ' ／ '+r.games.join(' − ');
 $('records').appendChild(p);
+let b=document.createElement('button');
+b.textContent='スコアシート表示・PDF保存';
+b.onclick=()=>showSheet(r);
+$('records').appendChild(b);
 });
+}
+function showSheet(r){
+const sheet=$('sheet');sheet.replaceChildren();
+const add=(tag,txt,parent=sheet)=>{let e=document.createElement(tag);e.textContent=txt;parent.appendChild(e);return e};
+const meta=r.config?.meta||{};
+const fmt=(v,mode)=>v?new Date(v).toLocaleString('ja-JP',mode==='time'?{hour:'2-digit',minute:'2-digit'}:{year:'numeric',month:'2-digit',day:'2-digit'}):'—';
+add('h2','スコアシート');
+const m=add('div','');m.className='meta';
+add('div','大会名：'+(meta.event||'—')+'　試合番号：'+(meta.match||'—')+'　コート：'+(meta.court||'—'),m);
+add('div','種目：ダブルス　日付：'+fmt(r.matchStart||r.date)+'　主審：'+(meta.umpire||'—'),m);
+const end=r.matchEnd;
+add('div','開始：'+fmt(r.matchStart,'time')+'　終了：'+fmt(end,'time')+'　試合時間：'+(r.matchStart&&end?Math.round((new Date(end)-new Date(r.matchStart))/60000)+'分':'—'),m);
+const teams=[r.names.slice(0,2).join('・'),r.names.slice(2,4).join('・')];
+add('h3',teams[0]+'　'+r.games.join(' − ')+'　'+teams[1]);
+add('div','最終結果：'+teams[r.games[0]>r.games[1]?0:1]+' 勝利');
+for(let n=0;n<3;n++){
+const g=r.details[n];
+add('strong','第'+(n+1)+'ゲーム'+(g?'　'+g.score.join(' − '):''));
+const cols=g?[['S','S'].map((v,t)=>g.firstServer==null?'':Math.floor(g.firstServer/2)===t?v:''),g.initial,...g.events.map(e=>[0,1].map(t=>e.team===t?e.score[t]:'')),g.score]:[];
+const width=28;
+for(let offset=0;offset<Math.max(cols.length,width);offset+=width){
+const table=add('table','');
+for(let t=0;t<2;t++){
+const tr=add('tr','',table);
+const th=add('th',offset===0?teams[t]:'続き',tr);th.style.width='19%';
+for(let j=0;j<width;j++){
+const i=offset+j;const td=add('td',String(cols[i]?.[t]??''),tr);
+if(g&&i===cols.length-1)td.className='final';
+}
+}
+}
+}
+add('div','主審署名：________________　　レフェリー署名：________________');
+const print=add('button','印刷・PDF保存');print.className='no-print';print.onclick=()=>window.print();
+const close=add('button','閉じる');close.className='no-print';close.onclick=()=>show('sheet',false);
+show('sheet',true);sheet.scrollIntoView({behavior:'smooth'});
 }
 function exportData(){
 let blob=new Blob([JSON.stringify(records,null,2)],
