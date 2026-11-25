@@ -47,9 +47,6 @@ small{color:#cbd5e1}
 <section id="setup">
 <h2>試合設定</h2>
 <input id="eventName" placeholder="大会名（任意）">
-<input id="matchNo" placeholder="試合番号（任意）">
-<input id="courtNo" placeholder="コート番号（任意）">
-<input id="umpire" placeholder="主審（任意）">
 <div class="grid">
 <div>
 <h3>HEBOIST</h3>
@@ -161,7 +158,7 @@ function prepare(){
 names=['a1','a2','b1','b2'].map(id=>$(id).value.trim()||id);
 config={
 teamNames:['HEBOIST',$('opponent').value.trim()||'相手'],
-meta:{event:$('eventName').value,match:$('matchNo').value,court:$('courtNo').value,umpire:$('umpire').value},
+meta:{event:$('eventName').value},
 target:Number($('target').value),
 deuce:$('deuce').value==='1',
 cap:Number($('cap').value),
@@ -363,8 +360,8 @@ const meta=r.config?.meta||{};
 const fmt=(v,mode)=>v?new Date(v).toLocaleString('ja-JP',mode==='time'?{hour:'2-digit',minute:'2-digit'}:{year:'numeric',month:'2-digit',day:'2-digit'}):'—';
 add('h2','スコアシート');
 const m=add('div','');m.className='meta';
-add('div','大会名：'+(meta.event||'—')+'　試合番号：'+(meta.match||'—')+'　コート：'+(meta.court||'—'),m);
-add('div','種目：ダブルス　日付：'+fmt(r.matchStart||r.date)+'　主審：'+(meta.umpire||'—'),m);
+add('div','大会名：'+(meta.event||'—'),m);
+add('div','種目：ダブルス　日付：'+fmt(r.matchStart||r.date),m);
 const end=r.matchEnd;
 add('div','開始：'+fmt(r.matchStart,'time')+'　終了：'+fmt(end,'time')+'　試合時間：'+(r.matchStart&&end?Math.round((new Date(end)-new Date(r.matchStart))/60000)+'分':'—'),m);
 const teams=[0,1].map(t=>(r.config?.teamNames?.[t]||(t===0?'HEBOIST':'相手'))+'（'+r.names.slice(t*2,t*2+2).join('・')+'）');
@@ -387,7 +384,7 @@ if(g&&i===cols.length-1)td.className='final';
 }
 }
 }
-add('div','主審署名：________________　　レフェリー署名：________________');
+
 const print=add('button','印刷・PDF保存');print.className='no-print';print.onclick=()=>window.print();
 const close=add('button','閉じる');close.className='no-print';close.onclick=()=>show('sheet',false);
 show('sheet',true);sheet.scrollIntoView({behavior:'smooth'});
