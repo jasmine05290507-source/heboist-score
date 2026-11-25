@@ -22,6 +22,10 @@ button:disabled{opacity:.4}
 .court{background:#28765c;padding:12px;border-radius:12px}
 .player{border:1px solid white;padding:14px 4px;text-align:center}
 .active{background:#d8b94e;color:#14243d}
+.receiving{background:#8bd0ff;color:#14243d}
+.court{display:grid;grid-template-columns:1fr 1fr;gap:0}
+.court-team{display:grid;gap:8px;padding:8px;text-align:center}
+.court-team+ .court-team{border-left:3px solid white}
 small{color:#cbd5e1}
 [hidden]{display:none!important}
 </style>
@@ -95,14 +99,14 @@ small{color:#cbd5e1}
 <h2 id="status" class="center"></h2>
 <div class="grid">
 <div class="center">
-Aチーム
-<div id="sa" class="score">0</div>
-<button id="pa" onclick="point(0)">＋1点</button>
-</div>
-<div class="center">
 Bチーム
 <div id="sb" class="score">0</div>
 <button id="pb" onclick="point(1)">＋1点</button>
+</div>
+<div class="center">
+Aチーム
+<div id="sa" class="score">0</div>
+<button id="pa" onclick="point(0)">＋1点</button>
 </div>
 </div>
 <p id="games" class="center"></p>
@@ -250,18 +254,21 @@ $('undo').disabled=!history.length;
 let t=Math.floor(server/2);
 let p=score[t]%2;
 let r=pos[1-t][p];
-$('service').textContent='サーブ：'+names[server]+
-' ／ レシーブ：'+names[r];
+$('service').textContent='サーブ：'+(t===0?'A':'B')+'の'+(p===0?'右':'左')+
+' ／ レシーブ：'+(t===0?'B':'A')+'の'+(p===0?'右':'左');
 $('court').replaceChildren();
-[0,1].forEach(team=>{
+[1,0].forEach(team=>{
 let row=document.createElement('div');
-row.className='grid';
-let order=team===0?[1,0]:[0,1];
+row.className='court-team';
+let title=document.createElement('strong');
+title.textContent=team===0?'Aチーム':'Bチーム';
+row.appendChild(title);
+let order=team===0?[0,1]:[1,0];
 order.forEach(j=>{
 let i=pos[team][j];
 let cell=document.createElement('div');
-cell.className='player'+(i===server?' active':'');
-cell.textContent=(j===0?'右':'左')+'：'+names[i]+
+cell.className='player'+(i===server?' active':i===r?' receiving':'');
+cell.textContent=(team===0?'A':'B')+'の'+(j===0?'右':'左')+
 (i===server?' 🏸':i===r?' レシーブ':'');
 row.appendChild(cell);
 });
