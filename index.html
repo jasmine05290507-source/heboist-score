@@ -52,7 +52,7 @@ small{color:#cbd5e1}
 <input id="umpire" placeholder="主審（任意）">
 <div class="grid">
 <div>
-<h3>Aチーム</h3>
+<h3>HEBOIST</h3>
 <input id="a1" value="選手A">
 <input id="a2" value="選手B">
 <select id="ta">
@@ -62,7 +62,8 @@ small{color:#cbd5e1}
 </select>
 </div>
 <div>
-<h3>Bチーム</h3>
+<h3>相手</h3>
+<input id="opponent" placeholder="相手チーム名（任意）">
 <input id="b1" value="選手C">
 <input id="b2" value="選手D">
 <select id="tb">
@@ -112,12 +113,12 @@ small{color:#cbd5e1}
 <h2 id="status" class="center"></h2>
 <div class="grid">
 <div class="center">
-Bチーム
+<span id="teamB">相手</span>
 <div id="sb" class="score">0</div>
 <button id="pb" onclick="point(1)">＋1点</button>
 </div>
 <div class="center">
-Aチーム
+HEBOIST
 <div id="sa" class="score">0</div>
 <button id="pa" onclick="point(0)">＋1点</button>
 </div>
@@ -159,6 +160,7 @@ $(id).hidden=!on;
 function prepare(){
 names=['a1','a2','b1','b2'].map(id=>$(id).value.trim()||id);
 config={
+teamNames:['HEBOIST',$('opponent').value.trim()||'相手'],
 meta:{event:$('eventName').value,match:$('matchNo').value,court:$('courtNo').value,umpire:$('umpire').value},
 target:Number($('target').value),
 deuce:$('deuce').value==='1',
@@ -193,7 +195,7 @@ function opening(team){
 show('play',false);
 show('opening',true);
 $('gameTitle').textContent='第'+number+'ゲーム';
-$('initial').textContent='開始得点：'+h.join(' − ');
+$('initial').textContent='開始得点：'+'HEBOIST '+h[0]+' − '+h[1]+' '+teamName(1);
 $('first').replaceChildren();
 names.forEach((n,i)=>{
 if(team===-1||Math.floor(i/2)===team)
@@ -250,7 +252,9 @@ server=s.server;
 events=s.events;
 render();
 }
+function teamName(t){return config.teamNames?.[t]|| (t===0?'HEBOIST':'相手');}
 function render(){
+$('teamB').textContent=teamName(1);
 winner=-1;
 let max=Math.max(...score);
 if(max>=config.target&&
@@ -265,29 +269,29 @@ $('sa').textContent=score[0];
 $('sb').textContent=score[1];
 $('status').textContent=winner===-1?
 '第'+number+'ゲーム':
-(winner===0?'A':'B')+'チーム勝利';
+teamName(winner)+' 勝利';
 $('games').textContent='取得ゲーム：'+
-games.map((g,i)=>g+(winner===i?1:0)).join(' − ');
+teamName(0)+' '+(games[0]+(winner===0?1:0))+' − '+(games[1]+(winner===1?1:0))+' '+teamName(1);
 $('pa').disabled=$('pb').disabled=winner!==-1;
 $('undo').disabled=!history.length;
 let t=Math.floor(server/2);
 let p=score[t]%2;
 let r=pos[1-t][p];
-$('service').textContent='サーブ：'+(t===0?'A':'B')+'の'+(p===0?'右':'左')+
-' ／ レシーブ：'+(t===0?'B':'A')+'の'+(p===0?'右':'左');
+$('service').textContent='サーブ：'+teamName(t)+'の'+(p===0?'右':'左')+
+' ／ レシーブ：'+teamName(1-t)+'の'+(p===0?'右':'左');
 $('court').replaceChildren();
 [1,0].forEach(team=>{
 let row=document.createElement('div');
 row.className='court-team';
 let title=document.createElement('strong');
-title.textContent=team===0?'Aチーム':'Bチーム';
+title.textContent=teamName(team);
 row.appendChild(title);
 let order=team===0?[0,1]:[1,0];
 order.forEach(j=>{
 let i=pos[team][j];
 let cell=document.createElement('div');
 cell.className='player'+(i===server?' active':i===r?' receiving':'');
-cell.textContent=(team===0?'A':'B')+'の'+(j===0?'右':'左')+
+cell.textContent=teamName(team)+'の'+(j===0?'右':'左')+
 (i===server?' 🏸':i===r?' レシーブ':'');
 row.appendChild(cell);
 });
@@ -301,7 +305,7 @@ show('save',finished);
 $('log').replaceChildren();
 events.slice().reverse().forEach(e=>{
 let p=document.createElement('p');
-p.textContent=(e.team===0?'A':'B')+' ＋1 ／ '+
+p.textContent=teamName(e.team)+' ＋1 ／ '+
 e.score.join(' − ')+' ／ サーブ：'+names[e.server];
 $('log').appendChild(p);
 });
@@ -342,8 +346,8 @@ $('records').replaceChildren();
 records.forEach(r=>{
 let p=document.createElement('p');
 p.textContent=new Date(r.date).toLocaleString('ja-JP')+
-' ／ '+r.names.slice(0,2).join('・')+
-' vs '+r.names.slice(2).join('・')+
+' ／ '+(r.config?.teamNames?.[0]||'HEBOIST')+'（'+r.names.slice(0,2).join('・')+'）'+
+' vs '+(r.config?.teamNames?.[1]||'相手')+'（'+r.names.slice(2).join('・')+'）'+
 ' ／ '+r.games.join(' − ');
 $('records').appendChild(p);
 let b=document.createElement('button');
@@ -363,7 +367,7 @@ add('div','大会名：'+(meta.event||'—')+'　試合番号：'+(meta.match||'
 add('div','種目：ダブルス　日付：'+fmt(r.matchStart||r.date)+'　主審：'+(meta.umpire||'—'),m);
 const end=r.matchEnd;
 add('div','開始：'+fmt(r.matchStart,'time')+'　終了：'+fmt(end,'time')+'　試合時間：'+(r.matchStart&&end?Math.round((new Date(end)-new Date(r.matchStart))/60000)+'分':'—'),m);
-const teams=[r.names.slice(0,2).join('・'),r.names.slice(2,4).join('・')];
+const teams=[0,1].map(t=>(r.config?.teamNames?.[t]||(t===0?'HEBOIST':'相手'))+'（'+r.names.slice(t*2,t*2+2).join('・')+'）');
 add('h3',teams[0]+'　'+r.games.join(' − ')+'　'+teams[1]);
 add('div','最終結果：'+teams[r.games[0]>r.games[1]?0:1]+' 勝利');
 for(let n=0;n<3;n++){
