@@ -59,8 +59,7 @@ small{color:#cbd5e1}
 </select>
 </div>
 <div>
-<h3>相手</h3>
-<input id="opponent" placeholder="相手チーム名（任意）">
+<h3 style="margin:1em 0"><input id="opponent" aria-label="相手チーム名" value="相手" placeholder="相手" onfocus="if(this.value==='相手')this.select()" style="font-weight:bold;margin:0"></h3>
 <input id="b1" value="選手C">
 <input id="b2" value="選手D">
 <select id="tb">
