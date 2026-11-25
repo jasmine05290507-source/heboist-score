@@ -5,6 +5,10 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <meta name="apple-mobile-web-app-capable" content="yes">
+<link rel="manifest" href="./manifest.webmanifest">
+<meta name="theme-color" content="#14284b">
+<meta name="apple-mobile-web-app-title" content="HEBOIST">
+<link rel="icon" href="./pwa-icon.svg">
 <title>HEBOIST SCORE</title>
 <style>
 *{box-sizing:border-box}
@@ -42,6 +46,7 @@ small{color:#cbd5e1}
 #sheet table{min-width:780px}
 #sheet td{white-space:nowrap;overflow-wrap:normal;word-break:normal;font-variant-numeric:tabular-nums}
 @media print{#sheet{overflow:visible}#sheet table{min-width:0}#sheet td{font-size:10px;white-space:nowrap}}
+@media screen{body{background:#14284b}button{background:#ffda36}h1{color:#ffda36}.receiving{background:#79c9f5}}
 </style>
 </head>
 <body>
@@ -406,5 +411,6 @@ setTimeout(()=>URL.revokeObjectURL(url),1000);
 }
 renderRecords();
 </script>
+<script>if('serviceWorker' in navigator){navigator.serviceWorker.register('./sw.js').catch(console.warn);}</script>
 </body>
 </html>
