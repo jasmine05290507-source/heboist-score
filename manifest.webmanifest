@@ -1,0 +1,18 @@
+{
+  "id": "./",
+  "name": "HEBOIST SCORE",
+  "short_name": "HEBOIST",
+  "start_url": "./",
+  "scope": "./",
+  "display": "standalone",
+  "background_color": "#14284b",
+  "theme_color": "#14284b",
+  "icons": [
+    {
+      "src": "pwa-icon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any"
+    }
+  ]
+}
