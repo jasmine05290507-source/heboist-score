@@ -37,6 +37,7 @@ small{color:#cbd5e1}
 #sheet .final{font-weight:bold;border:2px solid #a32222}
 @page{size:A4 landscape;margin:9mm}
 @media print{body{background:white;color:black;padding:0}main{max-width:none}main>*:not(#sheet){display:none!important}#sheet{display:block!important;padding:0;margin:0}#sheet .no-print{display:none!important}#sheet table{break-inside:avoid}}
+.team-heading{height:48px;display:flex;align-items:center;margin:12px 0}.team-heading input{margin:0;font-size:clamp(12px,3.4vw,16px);padding:10px;min-width:0}
 </style>
 </head>
 <body>
@@ -49,7 +50,7 @@ small{color:#cbd5e1}
 <input id="eventName" placeholder="大会名（任意）">
 <div class="grid">
 <div>
-<h3>HEBOIST</h3>
+<h3 class="team-heading">HEBOIST</h3>
 <input id="a1" value="選手A">
 <input id="a2" value="選手B">
 <select id="ta">
@@ -59,7 +60,7 @@ small{color:#cbd5e1}
 </select>
 </div>
 <div>
-<h3 style="margin:1em 0"><input id="opponent" aria-label="相手チーム名" value="相手" placeholder="相手" onfocus="if(this.value==='相手')this.select()" style="font-weight:bold;margin:0"></h3>
+<h3 class="team-heading"><input id="opponent" aria-label="相手チーム名（任意）" placeholder="相手チーム名（任意）" autocomplete="off"></h3>
 <input id="b1" value="選手C">
 <input id="b2" value="選手D">
 <select id="tb">
