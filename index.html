@@ -136,6 +136,8 @@ HEBOIST
 <p id="service"></p>
 <p id="notice"></p>
 <button id="undo" onclick="undoPoint()">1点取り消し</button>
+<button id="voiceBtn" onclick="toggleVoice()">🎤 音声入力オフ</button>
+<p id="voiceStatus" class="center"><small>音声入力：声で「へぼいすと」→ HEBOIST＋1点／「相手」→ 相手＋1点／「取り消し」→ 1点取り消し</small></p>
 <button id="next" onclick="nextGame()" hidden>次のゲームへ</button>
 <button id="save" onclick="saveMatch()" hidden>試合結果を保存</button>
 <h3>得点履歴</h3>
@@ -409,6 +411,42 @@ a.href=url;
 a.download='heboist-history.json';
 a.click();
 setTimeout(()=>URL.revokeObjectURL(url),1000);
+}
+let voiceOn=false,recog=null,lastCmd=0;
+function toggleVoice(){
+if(voiceOn){voiceOn=false;try{recog&&recog.stop();}catch(e){}$('voiceBtn').textContent='🎤 音声入力オフ';$('voiceStatus').innerHTML='<small>音声入力はオフです</small>';return;}
+const SR=window.SpeechRecognition||window.webkitSpeechRecognition;
+if(!SR){$('voiceStatus').innerHTML='<small>このブラウザは音声入力に対応していません。Safariで開いてください</small>';return;}
+recog=new SR();
+recog.lang='ja-JP';
+recog.continuous=true;
+recog.interimResults=false;
+recog.onresult=e=>{
+let now=Date.now();
+if(now-lastCmd<900)return;
+for(let i=e.resultIndex;i<e.results.length;i++){
+if(!e.results[i].isFinal)continue;
+let t=e.results[i][0].transcript.replace(/\s/g,'');
+let cmd=-1,label='';
+if(/取り消し|とりけし|キャンセル/.test(t)){cmd=2;label='取り消し';}
+else if(/相手|あいて/.test(t)){cmd=1;label=teamName(1)+' ＋1点';}
+else if(/ヘボイスト|へぼいすと|エボイスト|へぼ/.test(t)){cmd=0;label=teamName(0)+' ＋1点';}
+if(cmd!==-1){
+lastCmd=now;
+if(cmd===2)undoPoint();else point(cmd);
+$('voiceStatus').innerHTML='<small>聞き取り：'+t+' → '+label+'</small>';
+return;
+}else{
+$('voiceStatus').innerHTML='<small>聞き取り：'+t+'（コマンドに一致しませんでした）</small>';
+}
+}
+};
+recog.onend=()=>{if(voiceOn){try{recog.start();}catch(e){}}};
+recog.onerror=e=>{if(e.error==='not-allowed'){$('voiceStatus').innerHTML='<small>マイクが許可されていません。Safariの設定でマイクを許可してください</small>';voiceOn=false;$('voiceBtn').textContent='🎤 音声入力オフ';}};
+voiceOn=true;
+try{recog.start();}catch(e){}
+$('voiceBtn').textContent='🎤 音声入力オン（聞き取り中）';
+$('voiceStatus').innerHTML='<small>聞き取り中…「へぼいすと」「相手」「取り消し」と話してください</small>';
 }
 renderRecords();
 </script>
